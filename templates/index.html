@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Navigation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Chatbot Navigation</h1>
+        <div id="chatContainer">
+            <div id="question">Kivel szeretne beszélni?</div>
+            <div id="options">
+                <button class="optionButton" onclick="sendMessage('Chatbot')">Chatbot</button>
+                <button class="optionButton" onclick="sendMessage('Ember')">Ember</button>
+                <button class="optionButton" onclick="sendMessage('Kutya')">Kutya</button>
+            </div>
+            <div id="response"></div>
+            <div id="chatInputContainer" style="display: none;">
+                <textarea id="chatInput" placeholder="Írjon ide..." rows="3"></textarea>
+                <button id="sendChat" onclick="sendChatMessage()">Küldés</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let step = 1;
+
+        function sendMessage(option) {
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: option, step: step }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    document.getElementById('question').innerText = data.response;
+                    step = data.step;
+
+                    const optionsContainer = document.getElementById('options');
+                    optionsContainer.innerHTML = '';
+
+                    if (data.options && data.options.length > 0) {
+                        data.options.forEach(option => {
+                            const button = document.createElement('button');
+                            button.className = 'optionButton';
+                            button.innerText = option;
+                            button.onclick = () => sendMessage(option);
+                            optionsContainer.appendChild(button);
+                        });
+                    } else if (step === 4) {
+                        document.getElementById('chatInputContainer').style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function sendChatMessage() {
+            const userMessage = document.getElementById('chatInput').value;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userMessage, step: 4 }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const responseDiv = document.getElementById('response');
+                responseDiv.innerHTML += `<p><strong>Ön:</strong> ${userMessage}</p>`;
+                responseDiv.innerHTML += `<p><strong>Chatbot:</strong> ${data.response}</p>`;
+                document.getElementById('chatInput').value = '';
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
